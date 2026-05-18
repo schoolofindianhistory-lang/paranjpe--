@@ -46,33 +46,6 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
-const slides = [
-  {
-    image: heroTemple,
-    eyebrow: "Sacred Stone",
-    title: "Explore Living Heritage Beyond Tourism",
-    sub: "Temple towns, sacred spaces and layered stories led with depth and clarity.",
-  },
-  {
-    image: pattadakalTemple,
-    eyebrow: "Temple Architecture",
-    title: "Travel Through Time, Not Just Places",
-    sub: "Decode sculpture, geometry and the imagination of the artisans who shaped them.",
-  },
-  {
-    image: hampiVitthala,
-    eyebrow: "World Heritage Journeys",
-    title: "Walk Deeper Into the Story",
-    sub: "From temple corridors to ruined capitals, every stop is designed for quiet wonder.",
-  },
-  {
-    image: gondeshwarComplex,
-    eyebrow: "Temple Craft",
-    title: "Where Stone Still Holds Memory",
-    sub: "Experience sculpted shrines, living traditions and architecture that rewards a slower look.",
-  },
-];
-
 const whyUs = [
   {
     icon: BookOpen,
@@ -153,54 +126,93 @@ const homeGallery = [
   },
 ] as const;
 
+const heroSlides = [
+  {
+    eyebrow: "Sacred Stone",
+    title: "Explore Living Heritage Beyond Tourism",
+    sub: "Temple towns, sacred spaces and layered stories led with depth and clarity.",
+  },
+  {
+    eyebrow: "Temple Architecture",
+    title: "Travel Through Time, Not Just Places",
+    sub: "Decode sculpture, geometry and the imagination of the artisans who shaped them.",
+  },
+  {
+    eyebrow: "World Heritage Journeys",
+    title: "Walk Deeper Into the Story",
+    sub: "From temple corridors to ruined capitals, every stop is designed for quiet wonder.",
+  },
+  {
+    eyebrow: "Temple Craft",
+    title: "Where Stone Still Holds Memory",
+    sub: "Experience sculpted shrines, living traditions and architecture that rewards a slower look.",
+  },
+] as const;
+
 function getFeaturedTours(tours: ReturnType<typeof Route.useLoaderData>["tours"]) {
   return tours.slice(0, 6).map((tour) => ({ tour, tagLabel: tour.category }));
 }
 
 function Home() {
-  const { tours, blogPosts, testimonials } = Route.useLoaderData();
+  const { tours, blogPosts, testimonials, heroSection } = Route.useLoaderData();
   const [slide, setSlide] = useState(0);
   const featuredExperiences = getFeaturedTours(tours);
+  const heroDesktopImage = heroSection.desktopImage?.trim() || heroTemple;
+  const heroMobileImage = heroSection.mobileImage?.trim() || "";
+  const heroOverlayOpacity = Number.isFinite(heroSection.overlayOpacity)
+    ? Math.min(0.9, Math.max(0, heroSection.overlayOpacity))
+    : 0.35;
+  const slides = [
+    { image: heroDesktopImage, mobileImage: heroMobileImage, ...heroSlides[0] },
+    { image: pattadakalTemple, ...heroSlides[1] },
+    { image: hampiVitthala, ...heroSlides[2] },
+    { image: gondeshwarComplex, ...heroSlides[3] },
+  ] as const;
 
   useEffect(() => {
     const timer = setInterval(() => setSlide((current) => (current + 1) % slides.length), 5500);
     return () => clearInterval(timer);
-  }, []);
+  }, [slides.length]);
 
   return (
     <Layout>
       <section className="relative h-[92vh] min-h-[560px] w-full overflow-hidden">
         {slides.map((item, index) => (
           <div
-            key={item.title}
+            key={`${item.title}-${index}`}
             className={`absolute inset-0 transition-opacity duration-[1400ms] ${index === slide ? "opacity-100" : "opacity-0"}`}
           >
-            <img
-              src={item.image}
-              alt=""
-              className={`h-full w-full object-cover ${index === slide ? "animate-slow-zoom" : ""}`}
-            />
-            <div className="absolute inset-0 bg-black/35" />
+            {item.mobileImage ? (
+              <picture>
+                <source media="(max-width: 767px)" srcSet={item.mobileImage} />
+                <img
+                  src={item.image}
+                  alt=""
+                  className={`h-full w-full object-cover object-center ${index === slide ? "animate-slow-zoom" : ""}`}
+                  fetchPriority={index === 0 ? "high" : undefined}
+                  decoding="async"
+                />
+              </picture>
+            ) : (
+              <img
+                src={item.image}
+                alt=""
+                className={`h-full w-full object-cover object-center ${index === slide ? "animate-slow-zoom" : ""}`}
+                loading="lazy"
+                decoding="async"
+              />
+            )}
+            <div className="absolute inset-0 bg-black" style={{ opacity: heroOverlayOpacity }} />
           </div>
         ))}
 
         <div className="container-prose relative z-10 flex h-full items-center">
           <div className="max-w-2xl text-primary-foreground">
-            <span key={slide} className="section-eyebrow animate-fade-in">
-              {slides[slide].eyebrow}
-            </span>
-            <h1
-              key={`title-${slide}`}
-              className="mt-4 animate-fade-up font-serif text-4xl leading-[1.05] sm:text-5xl lg:text-7xl"
-            >
+            <span className="section-eyebrow animate-fade-in">{slides[slide].eyebrow}</span>
+            <h1 className="mt-4 animate-fade-up font-serif text-4xl leading-[1.05] sm:text-5xl lg:text-7xl">
               {slides[slide].title}
             </h1>
-            <p
-              key={`subtitle-${slide}`}
-              className="mt-5 max-w-xl animate-fade-up text-lg text-primary-foreground/90"
-            >
-              {slides[slide].sub}
-            </p>
+            <p className="mt-5 max-w-xl animate-fade-up text-lg text-primary-foreground/90">{slides[slide].sub}</p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 to="/tours"
@@ -221,7 +233,7 @@ function Home() {
         <div className="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 gap-2">
           {slides.map((item, index) => (
             <button
-              key={item.title}
+              key={`dot-${item.title}-${index}`}
               aria-label={`Slide ${index + 1}`}
               onClick={() => setSlide(index)}
               className={`h-1.5 rounded-full transition-all ${index === slide ? "w-10 bg-gold" : "w-4 bg-primary-foreground/50"}`}

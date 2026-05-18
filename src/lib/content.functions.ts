@@ -17,6 +17,7 @@ import {
   type SaveBlogPostInput,
   type SaveCategoryInput,
   type SaveGalleryItemInput,
+  type SaveHeroSectionInput,
   type SaveShopItemInput,
   type SaveTeamMemberInput,
   type SaveTestimonialInput,
@@ -25,6 +26,7 @@ import {
   upsertBlogPost,
   upsertCategory,
   upsertGalleryItem,
+  upsertHeroSection,
   upsertShopItem,
   upsertTeamMember,
   upsertTestimonial,
@@ -79,6 +81,13 @@ export const saveTour = createServerFn({ method: "POST" })
   .inputValidator((data: SaveTourInput) => data)
   .handler(async ({ data }) => {
     await upsertTour(data);
+    return { success: true };
+  });
+
+export const saveHeroSection = createServerFn({ method: "POST" })
+  .inputValidator((data: SaveHeroSectionInput) => data)
+  .handler(async ({ data }) => {
+    await upsertHeroSection(data);
     return { success: true };
   });
 

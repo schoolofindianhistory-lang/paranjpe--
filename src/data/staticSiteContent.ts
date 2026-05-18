@@ -13,7 +13,13 @@ import gondeshwarComplex from "@/assets/gallery/gondeshwar-complex.jpg";
 import hampiVitthala from "@/assets/gallery/hampi-vitthala.jpg";
 import varanasiMunshiGhat from "@/assets/gallery/varanasi-munshi-ghat.jpg";
 import { defaultTeamMembers } from "@/data/teamMembers";
-import type { GalleryItem, ShopItem, TeamMember, Testimonial } from "@/lib/content.types";
+import type {
+  GalleryItem,
+  HeroSectionContent,
+  ShopItem,
+  TeamMember,
+  Testimonial,
+} from "@/lib/content.types";
 
 export const staticTestimonials: Testimonial[] = [
   {
@@ -184,3 +190,15 @@ export const staticGalleryItems: GalleryItem[] = [
     source: "static",
   },
 ];
+
+export const staticHeroSection: HeroSectionContent = {
+  desktopImage: heroTemple,
+  mobileImage: "",
+  heading: "Explore Living Heritage Beyond Tourism",
+  subheading:
+    "Temple towns, sacred spaces and layered stories led with depth and clarity.",
+  ctaText: "Explore Tours",
+  ctaLink: "/tours",
+  overlayOpacity: 0.35,
+  source: "static",
+};

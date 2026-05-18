@@ -72,6 +72,17 @@ export type GalleryItem = {
   source?: "database" | "static";
 };
 
+export type HeroSectionContent = {
+  desktopImage: string;
+  mobileImage?: string;
+  heading: string;
+  subheading: string;
+  ctaText: string;
+  ctaLink: string;
+  overlayOpacity: number;
+  source?: "database" | "static";
+};
+
 export type AdminUser = {
   id: number;
   username: string;
@@ -85,6 +96,7 @@ export type PublicSiteContent = {
   teamMembers: TeamMember[];
   shopItems: ShopItem[];
   galleryItems: GalleryItem[];
+  heroSection: HeroSectionContent;
   categories: ContentCategory[];
   databaseAvailable: boolean;
 };

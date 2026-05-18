@@ -4,23 +4,46 @@ import { ArrowRight, Clock, MapPin, TrendingUp } from "lucide-react";
 import { type Tour } from "@/data/tours";
 import { isExternalLink, resolveTourBookingHref } from "@/lib/booking";
 
-function isUpcomingTourDate(value?: string) {
-  if (!value) {
-    return false;
+function formatTourDate(value: string) {
+  const trimmed = value.trim();
+  const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  if (!match) {
+    return trimmed;
   }
 
-  const parsedDate = new Date(value);
-  if (Number.isNaN(parsedDate.getTime())) {
-    return false;
+  const [, yearText, monthText, dayText] = match;
+  const year = Number(yearText);
+  const monthIndex = Number(monthText) - 1;
+  const day = Number(dayText);
+  const date = new Date(Date.UTC(year, monthIndex, day));
+
+  if (Number.isNaN(date.getTime())) {
+    return trimmed;
   }
 
-  const tourDate = new Date(parsedDate);
-  tourDate.setHours(0, 0, 0, 0);
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  })
+    .format(date)
+    .replace(",", "");
+}
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+function getTourRibbonLabel(tour: Pick<Tour, "tourDate" | "tourDateLabel">) {
+  const customLabel = tour.tourDateLabel?.trim();
+  if (customLabel) {
+    return customLabel;
+  }
 
-  return tourDate > today;
+  const tourDate = tour.tourDate?.trim();
+  if (tourDate) {
+    return formatTourDate(tourDate);
+  }
+
+  return "Coming Soon";
 }
 
 export function TourCard({
@@ -32,7 +55,7 @@ export function TourCard({
   index?: number;
   tagLabel?: string;
 }) {
-  const ribbonLabel = isUpcomingTourDate(tour.tourDate) ? "Coming Soon" : tour.cardRibbonLabel;
+  const ribbonLabel = getTourRibbonLabel(tour);
   const bookNowHref = resolveTourBookingHref(tour);
   const bookNowIsExternal = isExternalLink(bookNowHref);
 

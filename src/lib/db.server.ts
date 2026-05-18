@@ -9,7 +9,7 @@ const DEFAULT_DB_PORT = Number(process.env.MYSQL_PORT ?? "3306");
 const DEFAULT_DB_USER = process.env.MYSQL_USER ?? "root";
 const DEFAULT_DB_PASSWORD = process.env.MYSQL_PASSWORD ?? "root";
 const DEFAULT_DB_NAME = process.env.MYSQL_DATABASE ?? "paranjpe_tours";
-const DB_SCHEMA_VERSION = "paranjpe-cms-v6";
+const DB_SCHEMA_VERSION = "paranjpe-cms-v8";
 
 const SCRYPT_KEY_LENGTH = 64;
 
@@ -100,9 +100,14 @@ async function ensureCmsToursColumns(pool: Pool) {
     await pool.execute("ALTER TABLE cms_tours ADD COLUMN tour_date DATE NULL AFTER duration");
   }
 
+  const hasTourDateLabel = await hasTableColumn(pool, "cms_tours", "tour_date_label");
+  if (!hasTourDateLabel) {
+    await pool.execute("ALTER TABLE cms_tours ADD COLUMN tour_date_label VARCHAR(255) NULL AFTER tour_date");
+  }
+
   const hasBookingUrl = await hasTableColumn(pool, "cms_tours", "booking_url");
   if (!hasBookingUrl) {
-    await pool.execute("ALTER TABLE cms_tours ADD COLUMN booking_url LONGTEXT NULL AFTER tour_date");
+    await pool.execute("ALTER TABLE cms_tours ADD COLUMN booking_url LONGTEXT NULL AFTER tour_date_label");
   }
 
   const hasStatus = await hasTableColumn(pool, "cms_tours", "status");
@@ -160,6 +165,7 @@ async function createTables(pool: Pool) {
       location VARCHAR(255) NOT NULL,
       duration VARCHAR(255) NOT NULL,
       tour_date DATE NULL,
+      tour_date_label VARCHAR(255) NULL,
       booking_url LONGTEXT NULL,
       status VARCHAR(24) NOT NULL DEFAULT 'published',
       difficulty VARCHAR(255) NOT NULL,
@@ -292,6 +298,21 @@ async function createTables(pool: Pool) {
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       INDEX idx_cms_gallery_items_sort_order (sort_order),
       INDEX idx_cms_gallery_items_is_published (is_published)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS cms_hero_section_settings (
+      id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      desktop_image LONGTEXT NOT NULL,
+      mobile_image LONGTEXT NULL,
+      heading VARCHAR(255) NOT NULL,
+      subheading TEXT NOT NULL,
+      cta_text VARCHAR(160) NOT NULL,
+      cta_link VARCHAR(600) NOT NULL,
+      overlay_opacity DECIMAL(4,2) NOT NULL DEFAULT 0.35,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 

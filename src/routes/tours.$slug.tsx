@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Calendar, Check, ChevronDown, Clock, MapPin, Mountain, Users, X } from "lucide-react";
 import { Layout } from "@/components/site/Layout";
 import { Breadcrumb } from "@/components/site/Breadcrumb";
@@ -22,6 +22,9 @@ export const Route = createFileRoute("/tours/$slug")({
       tours: content.tours,
     };
   },
+  headers: () => ({
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+  }),
   head: ({ loaderData }) => ({
     meta: loaderData
       ? [
@@ -78,6 +81,11 @@ export const Route = createFileRoute("/tours/$slug")({
 function TourDetail() {
   const { tour, tours } = Route.useLoaderData();
   const heroImage = getTourDisplayImage(tour);
+  const tourGallery = useMemo(
+    () => tour.gallery.filter((image) => image.src.trim().length > 0),
+    [tour.gallery],
+  );
+  const [activeGalleryIndex, setActiveGalleryIndex] = useState<number | null>(null);
   const bookNowHref = resolveTourBookingHref(tour);
   const bookNowIsExternal = isExternalLink(bookNowHref);
   const related = tours
@@ -92,6 +100,52 @@ function TourDetail() {
     { icon: Users, label: "Group Size", value: tour.groupSize },
     { icon: Check, label: "Price", value: tour.price },
   ].filter((item) => item.value.trim().length > 0);
+
+  useEffect(() => {
+    setActiveGalleryIndex(null);
+  }, [tour.slug]);
+
+  useEffect(() => {
+    if (activeGalleryIndex === null) {
+      return;
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setActiveGalleryIndex(null);
+        return;
+      }
+
+      if (!tourGallery.length) {
+        return;
+      }
+
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        setActiveGalleryIndex((prev) => {
+          const current = prev ?? 0;
+          return (current + 1) % tourGallery.length;
+        });
+      }
+
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        setActiveGalleryIndex((prev) => {
+          const current = prev ?? 0;
+          return (current - 1 + tourGallery.length) % tourGallery.length;
+        });
+      }
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [activeGalleryIndex, tourGallery]);
 
   return (
     <Layout>
@@ -263,18 +317,28 @@ function TourDetail() {
           )}
 
           <Block title="Photo Gallery">
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-              {tour.gallery.map((image, index) => (
-                <div key={`${tour.slug}-${index}`} className="image-zoom aspect-square overflow-hidden rounded-xl">
-                  <img
-                    src={image.src}
-                    alt={image.alt}
-                    className="h-full w-full object-cover object-center"
-                    loading="lazy"
-                  />
-                </div>
-              ))}
-            </div>
+            {tourGallery.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                {tourGallery.map((image, index) => (
+                  <button
+                    key={`${tour.slug}-${index}`}
+                    type="button"
+                    onClick={() => setActiveGalleryIndex(index)}
+                    className="image-zoom aspect-square overflow-hidden rounded-xl border border-border/80 text-left transition focus:outline-none focus:ring-2 focus:ring-gold/70"
+                    aria-label={`Open gallery image ${index + 1}`}
+                  >
+                    <img
+                      src={image.src}
+                      alt={image.alt}
+                      className="h-full w-full object-cover object-center"
+                      loading="lazy"
+                    />
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Gallery images will be added soon.</p>
+            )}
           </Block>
 
           {tour.faqs.length > 0 && (
@@ -346,6 +410,68 @@ function TourDetail() {
           </div>
         </div>
       </section>
+
+      {activeGalleryIndex !== null && tourGallery[activeGalleryIndex] ? (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/92 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Tour gallery lightbox"
+          onClick={() => setActiveGalleryIndex(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setActiveGalleryIndex(null)}
+            className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-black/40 text-white transition hover:bg-black/60"
+            aria-label="Close gallery"
+          >
+            <X size={18} />
+          </button>
+
+          {tourGallery.length > 1 ? (
+            <>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setActiveGalleryIndex(
+                    (activeGalleryIndex - 1 + tourGallery.length) % tourGallery.length,
+                  );
+                }}
+                className="absolute left-4 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-black/40 text-white transition hover:bg-black/60"
+                aria-label="Previous image"
+              >
+                <span className="text-2xl leading-none">&lt;</span>
+              </button>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setActiveGalleryIndex((activeGalleryIndex + 1) % tourGallery.length);
+                }}
+                className="absolute right-4 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-black/40 text-white transition hover:bg-black/60 md:right-16"
+                aria-label="Next image"
+              >
+                <span className="text-2xl leading-none">&gt;</span>
+              </button>
+            </>
+          ) : null}
+
+          <figure className="max-h-full w-full max-w-5xl" onClick={(event) => event.stopPropagation()}>
+            <img
+              src={tourGallery[activeGalleryIndex].src}
+              alt={tourGallery[activeGalleryIndex].alt}
+              className="max-h-[80vh] w-full rounded-2xl object-contain"
+            />
+            <figcaption className="mt-3 flex items-center justify-between text-sm text-white/85">
+              <span>{tourGallery[activeGalleryIndex].alt}</span>
+              <span>
+                {activeGalleryIndex + 1}/{tourGallery.length}
+              </span>
+            </figcaption>
+          </figure>
+        </div>
+      ) : null}
     </Layout>
   );
 }

@@ -4,6 +4,7 @@ import {
   BookOpen,
   Database,
   FolderTree,
+  Image,
   ImagePlus,
   LogOut,
   MessageSquareQuote,
@@ -33,6 +34,7 @@ import {
   saveBlogPost,
   saveCategory,
   saveGalleryItem,
+  saveHeroSection,
   saveShopItem,
   saveTeamMember,
   saveTestimonial,
@@ -42,6 +44,7 @@ import type {
   SaveBlogPostInput,
   SaveCategoryInput,
   SaveGalleryItemInput,
+  SaveHeroSectionInput,
   SaveShopItemInput,
   SaveTeamMemberInput,
   SaveTestimonialInput,
@@ -51,6 +54,7 @@ import type {
   BlogPost,
   ContentCategory,
   GalleryItem,
+  HeroSectionContent,
   ManagedTour,
   ShopItem,
   TeamMember,
@@ -72,7 +76,15 @@ type Feedback =
     }
   | null;
 
-type AdminSectionId = "categories" | "tours" | "gallery" | "testimonials" | "team" | "shop" | "blogs";
+type AdminSectionId =
+  | "categories"
+  | "hero"
+  | "tours"
+  | "gallery"
+  | "testimonials"
+  | "team"
+  | "shop"
+  | "blogs";
 type ImageInputMode = "upload" | "url";
 
 type CategoryDraft = {
@@ -138,6 +150,16 @@ type BlogDraft = {
   publishedOn: string;
 };
 
+type HeroDraft = {
+  desktopImage: string;
+  mobileImage: string;
+  heading: string;
+  subheading: string;
+  ctaText: string;
+  ctaLink: string;
+  overlayOpacity: string;
+};
+
 type CategoryPresetCard = {
   id?: number;
   name: string;
@@ -157,6 +179,7 @@ type TourDraft = {
   location: string;
   duration: string;
   tourDate: string;
+  tourDateLabel: string;
   bookingUrl: string;
   difficulty: string;
   bestFor: string;
@@ -180,6 +203,47 @@ type TourDraft = {
 };
 
 const MIN_NEW_TOUR_GALLERY_ITEMS = 4;
+const HERO_ACCEPTED_FILE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+type ImageUploadOptions = {
+  maxWidth: number;
+  maxHeight: number;
+  minWidth?: number;
+  minHeight?: number;
+  quality?: number;
+  maxFileSizeBytes?: number;
+  allowedMimeTypes?: string[];
+  label?: string;
+};
+
+const DEFAULT_IMAGE_UPLOAD_OPTIONS: ImageUploadOptions = {
+  maxWidth: 1200,
+  maxHeight: 1200,
+  quality: 0.7,
+  maxFileSizeBytes: 6 * 1024 * 1024,
+};
+
+const HERO_DESKTOP_UPLOAD_OPTIONS: ImageUploadOptions = {
+  maxWidth: 1920,
+  maxHeight: 1080,
+  minWidth: 1280,
+  minHeight: 720,
+  quality: 0.78,
+  maxFileSizeBytes: 8 * 1024 * 1024,
+  allowedMimeTypes: HERO_ACCEPTED_FILE_TYPES,
+  label: "desktop hero image",
+};
+
+const HERO_MOBILE_UPLOAD_OPTIONS: ImageUploadOptions = {
+  maxWidth: 1080,
+  maxHeight: 1350,
+  minWidth: 720,
+  minHeight: 900,
+  quality: 0.78,
+  maxFileSizeBytes: 8 * 1024 * 1024,
+  allowedMimeTypes: HERO_ACCEPTED_FILE_TYPES,
+  label: "mobile hero image",
+};
 
 const multilineInputClass =
   "w-full rounded-2xl border border-white/10 bg-black/35 px-4 py-3.5 text-sm text-white placeholder:text-white/28 shadow-[inset_0_1px_2px_rgba(255,255,255,0.03)] transition focus:border-orange-400/40 focus:outline-none focus:ring-4 focus:ring-orange-400/10";
@@ -239,10 +303,39 @@ function galleryToDraftItems(tour: ManagedTour) {
     .map((image) => createGalleryDraftItem(image.src, image.alt ?? ""));
 }
 
-function readFileAsDataUrl(file: File) {
+function formatFileSize(size: number) {
+  return `${Math.round((size / (1024 * 1024)) * 10) / 10} MB`;
+}
+
+function readFileAsDataUrl(file: File, options: ImageUploadOptions = DEFAULT_IMAGE_UPLOAD_OPTIONS) {
   return new Promise<string>((resolve, reject) => {
     if (!file.type.startsWith("image/")) {
       reject(new Error("File is not an image."));
+      return;
+    }
+
+    const {
+      maxWidth,
+      maxHeight,
+      minWidth,
+      minHeight,
+      quality = 0.7,
+      maxFileSizeBytes = 6 * 1024 * 1024,
+      allowedMimeTypes,
+      label = "image",
+    } = options;
+
+    if (allowedMimeTypes && !allowedMimeTypes.includes(file.type)) {
+      reject(new Error(`Please upload a JPG, PNG, or WEBP file for the ${label}.`));
+      return;
+    }
+
+    if (file.size > maxFileSizeBytes) {
+      reject(
+        new Error(
+          `The ${label} is too large (${formatFileSize(file.size)}). Keep it under ${formatFileSize(maxFileSizeBytes)}.`,
+        ),
+      );
       return;
     }
 
@@ -252,17 +345,33 @@ function readFileAsDataUrl(file: File) {
     img.onload = () => {
       URL.revokeObjectURL(url);
 
-      const MAX_WIDTH = 1200;
-      const MAX_HEIGHT = 1200;
       let width = img.width;
       let height = img.height;
 
-      if (width > height && width > MAX_WIDTH) {
-        height = Math.round((height * MAX_WIDTH) / width);
-        width = MAX_WIDTH;
-      } else if (height > MAX_HEIGHT) {
-        width = Math.round((width * MAX_HEIGHT) / height);
-        height = MAX_HEIGHT;
+      if (minWidth && width < minWidth) {
+        reject(
+          new Error(
+            `The ${label} is too small (${width}x${height}). Minimum recommended size is ${minWidth}x${minHeight ?? minWidth}.`,
+          ),
+        );
+        return;
+      }
+
+      if (minHeight && height < minHeight) {
+        reject(
+          new Error(
+            `The ${label} is too small (${width}x${height}). Minimum recommended size is ${minWidth ?? minHeight}x${minHeight}.`,
+          ),
+        );
+        return;
+      }
+
+      if (width > height && width > maxWidth) {
+        height = Math.round((height * maxWidth) / width);
+        width = maxWidth;
+      } else if (height > maxHeight) {
+        width = Math.round((width * maxHeight) / height);
+        height = maxHeight;
       }
 
       const canvas = document.createElement("canvas");
@@ -276,7 +385,7 @@ function readFileAsDataUrl(file: File) {
       }
 
       ctx.drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL("image/webp", 0.7));
+      resolve(canvas.toDataURL("image/webp", quality));
     };
 
     img.onerror = () => {
@@ -411,6 +520,39 @@ function blogToDraft(post?: BlogPost): BlogDraft {
   };
 }
 
+function heroToDraft(hero: HeroSectionContent): HeroDraft {
+  return {
+    desktopImage: hero.desktopImage ?? "",
+    mobileImage: hero.mobileImage ?? "",
+    heading: hero.heading ?? "",
+    subheading: hero.subheading ?? "",
+    ctaText: hero.ctaText ?? "",
+    ctaLink: hero.ctaLink ?? "",
+    overlayOpacity: String(Math.round((hero.overlayOpacity ?? 0.35) * 100)),
+  };
+}
+
+function normalizeOverlayPercent(value: string) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return 35;
+  }
+
+  return Math.min(90, Math.max(0, Math.round(parsed)));
+}
+
+function draftToHeroInput(draft: HeroDraft): SaveHeroSectionInput {
+  return {
+    desktopImage: draft.desktopImage.trim(),
+    mobileImage: draft.mobileImage.trim() || "",
+    heading: draft.heading.trim(),
+    subheading: draft.subheading.trim(),
+    ctaText: draft.ctaText.trim(),
+    ctaLink: draft.ctaLink.trim(),
+    overlayOpacity: normalizeOverlayPercent(draft.overlayOpacity) / 100,
+  };
+}
+
 function createEmptyTourDraft(categories: ContentCategory[]): TourDraft {
   return {
     legacyKey: undefined,
@@ -421,6 +563,7 @@ function createEmptyTourDraft(categories: ContentCategory[]): TourDraft {
     location: "",
     duration: "",
     tourDate: "",
+    tourDateLabel: "",
     bookingUrl: "",
     difficulty: "",
     bestFor: "",
@@ -462,6 +605,7 @@ function tourToDraft(tour: ManagedTour, categories: ContentCategory[]): TourDraf
     location: tour.location,
     duration: tour.duration,
     tourDate: tour.tourDate ?? "",
+    tourDateLabel: tour.tourDateLabel ?? "",
     bookingUrl: tour.bookingUrl ?? "",
     difficulty: tour.difficulty,
     bestFor: tour.bestFor,
@@ -507,6 +651,7 @@ function draftToTourInput(draft: TourDraft): SaveTourInput {
     location: draft.location,
     duration: draft.duration,
     tourDate: draft.tourDate.trim() || undefined,
+    tourDateLabel: draft.tourDateLabel.trim() || undefined,
     bookingUrl: draft.bookingUrl.trim() || undefined,
     difficulty: draft.difficulty,
     bestFor: draft.bestFor,
@@ -546,7 +691,18 @@ function createHiddenLegacyTourInput(
 }
 
 function AdminDashboard() {
-  const { admin, tours, blogPosts, testimonials, teamMembers, shopItems, galleryItems, categories, databaseAvailable } =
+  const {
+    admin,
+    tours,
+    blogPosts,
+    testimonials,
+    teamMembers,
+    shopItems,
+    galleryItems,
+    heroSection,
+    categories,
+    databaseAvailable,
+  } =
     Route.useLoaderData();
   const router = useRouter();
   const navigate = useNavigate();
@@ -609,6 +765,7 @@ function AdminDashboard() {
   const [shopDraft, setShopDraft] = useState<ShopItemDraft>(() => shopItemToDraft());
   const [galleryDraft, setGalleryDraft] = useState<GalleryDraft>(() => galleryToDraft());
   const [blogDraft, setBlogDraft] = useState<BlogDraft>(() => blogToDraft());
+  const [heroDraft, setHeroDraft] = useState<HeroDraft>(() => heroToDraft(heroSection));
   const isLegacyTourDraft = Boolean(tourDraft.legacyKey && !tourDraft.id);
   const isLegacyTestimonialDraft = Boolean(testimonialDraft.legacyKey && !testimonialDraft.id);
   const isLegacyShopDraft = Boolean(shopDraft.legacyKey && !shopDraft.id);
@@ -627,6 +784,13 @@ function AdminDashboard() {
       icon: FolderTree,
       count: `${adminCategories.length}`,
       note: "Used in the tour form",
+    },
+    {
+      id: "hero",
+      label: "Hero Section",
+      icon: Image,
+      count: "1",
+      note: heroSection.source === "database" ? "Homepage hero managed in admin" : "Using fallback hero settings",
     },
     {
       id: "tours",
@@ -677,6 +841,8 @@ function AdminDashboard() {
   const currentTourCover =
     tourDraft.image.trim() || tourDraft.galleryItems.find((item) => item.src.trim())?.src || "";
   const galleryImageCount = tourDraft.galleryItems.filter((item) => item.src.trim().length > 0).length;
+  const heroOverlayPercent = normalizeOverlayPercent(heroDraft.overlayOpacity);
+  const heroOverlayOpacity = heroOverlayPercent / 100;
 
   useEffect(() => {
     if (!tourDraft.image.trim() || tourDraft.image.startsWith("data:")) {
@@ -686,6 +852,18 @@ function AdminDashboard() {
 
     setTourCoverMode("url");
   }, [tourDraft.id, tourDraft.image]);
+
+  useEffect(() => {
+    setHeroDraft(heroToDraft(heroSection));
+  }, [
+    heroSection.desktopImage,
+    heroSection.mobileImage,
+    heroSection.heading,
+    heroSection.subheading,
+    heroSection.ctaText,
+    heroSection.ctaLink,
+    heroSection.overlayOpacity,
+  ]);
 
   async function runTask(taskKey: string, successText: string, task: () => Promise<void>) {
     setBusyKey(taskKey);
@@ -904,8 +1082,10 @@ function AdminDashboard() {
                   {activeSidebarItem.label}
                 </h2>
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-white/55">
-                  {activeSidebarItem.note}. Legacy frontend items can now be imported into admin
-                  management or hidden directly from this dashboard.
+                  {activeSidebarItem.note}.{" "}
+                  {activeSection === "hero"
+                    ? "Update banner images, copy, CTA, and overlay from one place."
+                    : "Legacy frontend items can now be imported into admin management or hidden directly from this dashboard."}
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
@@ -1085,6 +1265,167 @@ function AdminDashboard() {
               </SectionCard>
             )}
 
+            {activeSection === "hero" && (
+              <SectionCard
+                id="hero"
+                title="Hero Section"
+                subtitle="Manage the homepage hero banner image, mobile variant, copy, call-to-action, and overlay intensity."
+              >
+                <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
+                  <div className="grid gap-5">
+                    <div className={darkPanelClass}>
+                      <p className="text-xs uppercase tracking-[0.2em] text-white/40">
+                        Live Preview
+                      </p>
+                      <h3 className="mt-3 font-sans text-2xl font-semibold tracking-[-0.02em] text-white">
+                        Homepage hero frame
+                      </h3>
+                      <p className="mt-3 text-sm leading-6 text-white/55">
+                        This keeps the current hero layout while letting you change image and copy
+                        without code changes or redeploy.
+                      </p>
+
+                      <div className="mt-5 overflow-hidden rounded-[1.5rem] border border-white/10 bg-black/40 shadow-[0_20px_40px_-25px_rgba(0,0,0,0.95)]">
+                        <div className="relative aspect-[16/9]">
+                          <picture>
+                            {heroDraft.mobileImage.trim() && (
+                              <source media="(max-width: 767px)" srcSet={heroDraft.mobileImage} />
+                            )}
+                            <img
+                              src={heroDraft.desktopImage.trim() || heroSection.desktopImage}
+                              alt=""
+                              className="h-full w-full object-cover object-center"
+                            />
+                          </picture>
+                          <div
+                            className="absolute inset-0 bg-black"
+                            style={{ opacity: heroOverlayOpacity }}
+                          />
+                          <div className="absolute inset-0 flex items-end p-6 md:p-8">
+                            <div className="max-w-xl text-white">
+                              <p className="text-xs uppercase tracking-[0.24em] text-orange-200/90">
+                                Homepage Hero
+                              </p>
+                              <h4 className="mt-3 font-serif text-2xl leading-tight md:text-4xl">
+                                {heroDraft.heading || "Explore Living Heritage Beyond Tourism"}
+                              </h4>
+                              <p className="mt-3 text-sm leading-6 text-white/88 md:text-base">
+                                {heroDraft.subheading ||
+                                  "Temple towns, sacred spaces and layered stories led with depth and clarity."}
+                              </p>
+                              <span className="mt-5 inline-flex rounded-full bg-gold px-4 py-2 text-xs font-semibold text-gold-foreground">
+                                {heroDraft.ctaText || "Explore Tours"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <SingleImagePicker
+                      label="Desktop Hero Image"
+                      value={heroDraft.desktopImage}
+                      onChange={(value) => setHeroDraft((prev) => ({ ...prev, desktopImage: value }))}
+                      uploadLabel="Choose desktop banner image"
+                      urlPlaceholder="https://example.com/hero-desktop.jpg"
+                      helper="Recommended: 1920x1080 (minimum 1280x720). JPG, PNG, WEBP only. Uploaded files are auto-optimized."
+                      uploadOptions={HERO_DESKTOP_UPLOAD_OPTIONS}
+                      accept="image/jpeg,image/png,image/webp"
+                    />
+
+                    <SingleImagePicker
+                      label="Mobile Hero Image (Optional)"
+                      value={heroDraft.mobileImage}
+                      onChange={(value) => setHeroDraft((prev) => ({ ...prev, mobileImage: value }))}
+                      uploadLabel="Choose mobile banner image"
+                      urlPlaceholder="https://example.com/hero-mobile.jpg"
+                      helper="Recommended: 1080x1350 (minimum 720x900). Leave blank to use desktop image on mobile."
+                      uploadOptions={HERO_MOBILE_UPLOAD_OPTIONS}
+                      accept="image/jpeg,image/png,image/webp"
+                    />
+                  </div>
+
+                  <form
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      void runTask("save-hero", "Hero section saved.", async () => {
+                        await saveHeroSection({ data: draftToHeroInput(heroDraft) });
+                      });
+                    }}
+                    className={`${darkPanelClass} xl:sticky xl:top-6`}
+                  >
+                    <FormHeader
+                      title="Hero Content Controls"
+                      description="Manage heading, supporting text, CTA, destination link, and overlay intensity."
+                      onReset={() => setHeroDraft(heroToDraft(heroSection))}
+                    />
+                    <div className="mt-6 grid gap-4">
+                      <Field
+                        label="Heading Text"
+                        value={heroDraft.heading}
+                        onChange={(value) => setHeroDraft((prev) => ({ ...prev, heading: value }))}
+                        required
+                      />
+                      <TextAreaField
+                        label="Subheading Text"
+                        value={heroDraft.subheading}
+                        onChange={(value) =>
+                          setHeroDraft((prev) => ({ ...prev, subheading: value }))
+                        }
+                        rows={4}
+                      />
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <Field
+                          label="CTA Button Text"
+                          value={heroDraft.ctaText}
+                          onChange={(value) =>
+                            setHeroDraft((prev) => ({ ...prev, ctaText: value }))
+                          }
+                          required
+                        />
+                        <Field
+                          label="CTA Button Link"
+                          value={heroDraft.ctaLink}
+                          onChange={(value) =>
+                            setHeroDraft((prev) => ({ ...prev, ctaLink: value }))
+                          }
+                          placeholder="/tours or https://..."
+                          required
+                        />
+                      </div>
+                      <div className="rounded-[1.25rem] border border-white/10 bg-black/30 p-4">
+                        <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-white/40">
+                          Dark Overlay Opacity
+                        </label>
+                        <input
+                          type="range"
+                          min={0}
+                          max={90}
+                          step={1}
+                          value={heroOverlayPercent}
+                          onChange={(event) =>
+                            setHeroDraft((prev) => ({
+                              ...prev,
+                              overlayOpacity: event.target.value,
+                            }))
+                          }
+                          className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-white/20"
+                        />
+                        <p className="mt-2 text-sm text-white/65">{heroOverlayPercent}%</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-5 rounded-[1.25rem] border border-orange-500/16 bg-orange-500/8 p-4 text-sm leading-6 text-white/72">
+                      If no desktop image is saved, the homepage falls back to the default hero
+                      artwork automatically.
+                    </div>
+
+                    <SubmitButton busy={busyKey === "save-hero"} label="Save hero section" />
+                  </form>
+                </div>
+              </SectionCard>
+            )}
+
             {activeSection === "tours" && (
               <SectionCard
                 id="tours"
@@ -1100,7 +1441,9 @@ function AdminDashboard() {
                     tour.status === "draft" ? "Draft" : "Published",
                     tour.category,
                     tour.location,
-                    tour.tourDate ? `Date: ${tour.tourDate}` : undefined,
+                    (tour.tourDateLabel || tour.tourDate)
+                      ? `Date: ${tour.tourDateLabel || tour.tourDate}`
+                      : undefined,
                   ]
                     .filter(Boolean)
                     .join(" - ")}
@@ -1218,6 +1561,12 @@ function AdminDashboard() {
                   type="date"
                   value={tourDraft.tourDate}
                   onChange={(value) => setTourDraft((prev) => ({ ...prev, tourDate: value }))}
+                />
+                <Field
+                  label="Tour Date Badge Text"
+                  value={tourDraft.tourDateLabel}
+                  onChange={(value) => setTourDraft((prev) => ({ ...prev, tourDateLabel: value }))}
+                  placeholder="e.g. 10-16 August"
                 />
                 <Field
                   label="Book Now Link"
@@ -2459,6 +2808,8 @@ function SingleImagePicker({
   uploadLabel,
   urlPlaceholder,
   helper,
+  uploadOptions,
+  accept,
 }: {
   label: string;
   value: string;
@@ -2466,11 +2817,16 @@ function SingleImagePicker({
   uploadLabel: string;
   urlPlaceholder: string;
   helper?: string;
+  uploadOptions?: ImageUploadOptions;
+  accept?: string;
 }) {
   const [mode, setMode] = useState<ImageInputMode>("upload");
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const hasImage = value.trim().length > 0;
 
   useEffect(() => {
+    setUploadError(null);
+
     if (value.trim().startsWith("data:")) {
       setMode("upload");
       return;
@@ -2492,8 +2848,14 @@ function SingleImagePicker({
       return;
     }
 
-    onChange(await readFileAsDataUrl(file));
-    setMode("upload");
+    setUploadError(null);
+
+    try {
+      onChange(await readFileAsDataUrl(file, uploadOptions));
+      setMode("upload");
+    } catch (error) {
+      setUploadError(formatError(error));
+    }
   }
 
   return (
@@ -2566,10 +2928,11 @@ function SingleImagePicker({
               </label>
               <input
                 type="file"
-                accept="image/*"
+                accept={accept ?? "image/*"}
                 onChange={(event) => void handleImageUpload(event)}
                 className="block w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white file:mr-4 file:rounded-full file:border-0 file:bg-[linear-gradient(135deg,#ff7a18_0%,#ff3d71_100%)] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
               />
+              {uploadError && <p className="mt-2 text-xs text-red-300">{uploadError}</p>}
             </div>
           ) : (
             <Field

@@ -8,6 +8,7 @@ import {
 import { siteContact } from "@/data/siteContact";
 import {
   staticGalleryItems,
+  staticHeroSection,
   staticShopItems,
   staticTeamMembers,
   staticTestimonials,
@@ -19,6 +20,7 @@ import type {
   BlogPost,
   ContentCategory,
   GalleryItem,
+  HeroSectionContent,
   ManagedTour,
   PublicSiteContent,
   ShopItem,
@@ -78,6 +80,15 @@ function toIsoDateString(value: unknown): string | undefined {
 export type LegacyContentType = "tour" | "blog" | "testimonial" | "shop";
 
 const legacyContentTypes: LegacyContentType[] = ["tour", "blog", "testimonial", "shop"];
+
+function normalizeOverlayOpacity(value: unknown, fallback = 0.35) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+
+  return Math.min(0.9, Math.max(0, Math.round(numeric * 100) / 100));
+}
 
 function slugify(value: string) {
   return value
@@ -179,6 +190,7 @@ function mapTourRow(row: any): ManagedTour {
     location: String(row.location || ""),
     duration: String(row.duration || ""),
     tourDate: toIsoDateString(row.tour_date_value ?? row.tour_date),
+    tourDateLabel: String(row.tour_date_label || "").trim() || undefined,
     bookingUrl: String(row.booking_url || "").trim() || undefined,
     status: normalizeTourStatus(row.status),
     difficulty: String(row.difficulty || ""),
@@ -271,6 +283,19 @@ function mapCategoryRow(row: any): ContentCategory {
     name: String(row.name || ""),
     slug: String(row.slug || ""),
     description: String(row.description || ""),
+    source: "database",
+  };
+}
+
+function mapHeroSectionRow(row: any): HeroSectionContent {
+  return {
+    desktopImage: String(row.desktop_image || "").trim(),
+    mobileImage: String(row.mobile_image || "").trim() || undefined,
+    heading: String(row.heading || "").trim(),
+    subheading: String(row.subheading || "").trim(),
+    ctaText: String(row.cta_text || "").trim(),
+    ctaLink: String(row.cta_link || "").trim(),
+    overlayOpacity: normalizeOverlayOpacity(row.overlay_opacity, staticHeroSection.overlayOpacity),
     source: "database",
   };
 }
@@ -386,6 +411,9 @@ export async function fetchPublicSiteContent(
     const [galleryRows] = await pool.query<any[]>(
       "SELECT * FROM cms_gallery_items ORDER BY sort_order ASC, updated_at DESC, id DESC",
     );
+    const [heroRows] = await pool.query<any[]>(
+      "SELECT * FROM cms_hero_section_settings ORDER BY updated_at DESC, id DESC LIMIT 1",
+    );
     const [categoryRows] = await pool.query<any[]>(
       "SELECT * FROM categories ORDER BY name ASC",
     );
@@ -399,6 +427,7 @@ export async function fetchPublicSiteContent(
     const databaseTeamMembers = teamMemberRows.map(mapTeamMemberRow);
     const databaseShopItems = shopRows.map(mapShopRow);
     const databaseGalleryItems = galleryRows.map(mapGalleryRow);
+    const databaseHeroSection = heroRows.length > 0 ? mapHeroSectionRow(heroRows[0]) : undefined;
     const databaseCategories = categoryRows.map(mapCategoryRow);
     const staticCategories = buildStaticCategories();
     const hiddenLegacyItems = mapHiddenLegacyRows(legacyVisibilityRows);
@@ -429,6 +458,18 @@ export async function fetchPublicSiteContent(
       .filter((item) => !hiddenLegacyItems.shop.has(item.legacyKey));
     const mergedTours = mergeBySlug(databaseTours, visibleStaticTours);
     const mergedGalleryItems = mergeBySlug(databaseGalleryItems, staticGalleryItems);
+    const resolvedHeroSection: HeroSectionContent = databaseHeroSection
+      ? {
+          ...staticHeroSection,
+          ...databaseHeroSection,
+          desktopImage: databaseHeroSection.desktopImage || staticHeroSection.desktopImage,
+          heading: databaseHeroSection.heading || staticHeroSection.heading,
+          subheading: databaseHeroSection.subheading || staticHeroSection.subheading,
+          ctaText: databaseHeroSection.ctaText || staticHeroSection.ctaText,
+          ctaLink: databaseHeroSection.ctaLink || staticHeroSection.ctaLink,
+          source: "database",
+        }
+      : staticHeroSection;
 
     return {
       tours: includeDraftTours ? mergedTours : mergedTours.filter(isPublishedTour),
@@ -439,6 +480,7 @@ export async function fetchPublicSiteContent(
       galleryItems: includeUnpublishedGallery
         ? mergedGalleryItems
         : mergedGalleryItems.filter((item) => item.isPublished),
+      heroSection: resolvedHeroSection,
       categories: mergeBySlug(databaseCategories, staticCategories),
       databaseAvailable: true,
     };
@@ -473,6 +515,7 @@ export async function fetchPublicSiteContent(
       galleryItems: includeUnpublishedGallery
         ? staticGalleryItems
         : staticGalleryItems.filter((item) => item.isPublished),
+      heroSection: staticHeroSection,
       categories: buildStaticCategories(),
       databaseAvailable: false,
     };
@@ -506,6 +549,7 @@ export type SaveTourInput = {
   location?: string;
   duration?: string;
   tourDate?: string;
+  tourDateLabel?: string;
   bookingUrl?: string;
   difficulty?: string;
   bestFor?: string;
@@ -525,6 +569,16 @@ export type SaveTourInput = {
   whoCanJoin?: string;
   faqs?: TourFaq[];
   notes?: string[];
+};
+
+export type SaveHeroSectionInput = {
+  desktopImage?: string;
+  mobileImage?: string;
+  heading?: string;
+  subheading?: string;
+  ctaText?: string;
+  ctaLink?: string;
+  overlayOpacity?: number;
 };
 
 export type SaveGalleryItemInput = {
@@ -793,6 +847,7 @@ export async function upsertTour(input: SaveTourInput) {
   const image = input.image?.trim() ?? "";
   const gallery = input.gallery?.filter((item) => item.src.trim()) ?? [];
   const normalizedTourDate = toIsoDateString(input.tourDate?.trim()) ?? null;
+  const normalizedTourDateLabel = input.tourDateLabel?.trim() || null;
   const normalizedBookingUrl = input.bookingUrl?.trim() ?? "";
   const normalizedStatus = normalizeTourStatus(input.status);
 
@@ -805,6 +860,7 @@ export async function upsertTour(input: SaveTourInput) {
     input.location?.trim() ?? "",
     input.duration?.trim() ?? "",
     normalizedTourDate,
+    normalizedTourDateLabel,
     normalizedBookingUrl,
     input.difficulty?.trim() ?? "",
     input.bestFor?.trim() ?? "",
@@ -839,6 +895,7 @@ export async function upsertTour(input: SaveTourInput) {
           location = ?,
           duration = ?,
           tour_date = ?,
+          tour_date_label = ?,
           booking_url = ?,
           difficulty = ?,
           best_for = ?,
@@ -874,6 +931,7 @@ export async function upsertTour(input: SaveTourInput) {
           location,
           duration,
           tour_date,
+          tour_date_label,
           booking_url,
           difficulty,
           best_for,
@@ -893,7 +951,7 @@ export async function upsertTour(input: SaveTourInput) {
           who_can_join,
           faqs_json,
           notes_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       values,
     );
@@ -906,6 +964,65 @@ export async function deleteTourById(id: number) {
   await requireAdmin();
   const pool = await getPool();
   await pool.execute("DELETE FROM cms_tours WHERE id = ?", [id]);
+}
+
+export async function upsertHeroSection(input: SaveHeroSectionInput) {
+  await requireAdmin();
+  const pool = await getPool();
+
+  const [rows] = await pool.query<any[]>(
+    "SELECT * FROM cms_hero_section_settings ORDER BY updated_at DESC, id DESC LIMIT 1",
+  );
+  const existingRow = rows[0];
+  const existingHero = existingRow ? mapHeroSectionRow(existingRow) : staticHeroSection;
+
+  const desktopImage = input.desktopImage?.trim() ?? "";
+  const mobileImage = input.mobileImage?.trim() || null;
+  const heading = input.heading?.trim() || existingHero.heading || staticHeroSection.heading;
+  const subheading =
+    input.subheading?.trim() || existingHero.subheading || staticHeroSection.subheading;
+  const ctaText = input.ctaText?.trim() || existingHero.ctaText || staticHeroSection.ctaText;
+  const ctaLink = input.ctaLink?.trim() || existingHero.ctaLink || staticHeroSection.ctaLink;
+  const overlayOpacity = normalizeOverlayOpacity(
+    input.overlayOpacity,
+    existingHero.overlayOpacity ?? staticHeroSection.overlayOpacity,
+  );
+
+  const values = [desktopImage, mobileImage, heading, subheading, ctaText, ctaLink, overlayOpacity];
+
+  if (existingRow) {
+    await pool.execute(
+      `
+        UPDATE cms_hero_section_settings
+        SET
+          desktop_image = ?,
+          mobile_image = ?,
+          heading = ?,
+          subheading = ?,
+          cta_text = ?,
+          cta_link = ?,
+          overlay_opacity = ?
+        WHERE id = ?
+      `,
+      [...values, Number(existingRow.id)],
+    );
+    return;
+  }
+
+  await pool.execute(
+    `
+      INSERT INTO cms_hero_section_settings (
+        desktop_image,
+        mobile_image,
+        heading,
+        subheading,
+        cta_text,
+        cta_link,
+        overlay_opacity
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `,
+    values,
+  );
 }
 
 export async function upsertTestimonial(input: SaveTestimonialInput) {
