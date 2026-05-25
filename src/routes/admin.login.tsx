@@ -14,6 +14,7 @@ export const Route = createFileRoute("/admin/login")({
   },
   head: () => ({
     meta: [{ title: "Admin Login - Paranjape Tours" }],
+    
   }),
   component: AdminLogin,
 });
