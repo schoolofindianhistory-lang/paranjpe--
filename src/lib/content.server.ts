@@ -31,6 +31,13 @@ import type {
 type GalleryImage = { src: string; alt: string };
 type TourItinerary = { time: string; title: string; desc: string };
 type TourFaq = { q: string; a: string };
+const stableHeroImagePaths = {
+  "hero-temple": "/hero-temple.jpg",
+  "hero-story": "/hero-story.jpg",
+  "hero-walk": "/hero-walk.jpg",
+  "hero-fort": "/hero-fort.jpg",
+} as const;
+
 type FetchContentOptions = {
   includeDraftTours?: boolean;
   includeUnpublishedGallery?: boolean;
@@ -289,8 +296,8 @@ function mapCategoryRow(row: any): ContentCategory {
 
 function mapHeroSectionRow(row: any): HeroSectionContent {
   return {
-    desktopImage: String(row.desktop_image || "").trim(),
-    mobileImage: String(row.mobile_image || "").trim() || undefined,
+    desktopImage: normalizeHeroImageValue(row.desktop_image),
+    mobileImage: normalizeHeroImageValue(row.mobile_image) || undefined,
     heading: String(row.heading || "").trim(),
     subheading: String(row.subheading || "").trim(),
     ctaText: String(row.cta_text || "").trim(),
@@ -637,6 +644,25 @@ function looksLikeEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+function normalizeHeroImageValue(value?: string | null) {
+  const trimmed = String(value ?? "").trim();
+
+  if (!trimmed) {
+    return "";
+  }
+
+  const assetMatch = trimmed.match(
+    /^\/assets\/(hero-(?:temple|story|walk|fort))(?:-[^/.]+)?\.(?:jpg|jpeg|png|webp)$/i,
+  );
+
+  if (!assetMatch) {
+    return trimmed;
+  }
+
+  const normalizedKey = assetMatch[1].toLowerCase() as keyof typeof stableHeroImagePaths;
+  return stableHeroImagePaths[normalizedKey];
+}
+
 function countPhoneDigits(value: string) {
   return value.replace(/\D/g, "").length;
 }
@@ -976,8 +1002,14 @@ export async function upsertHeroSection(input: SaveHeroSectionInput) {
   const existingRow = rows[0];
   const existingHero = existingRow ? mapHeroSectionRow(existingRow) : staticHeroSection;
 
-  const desktopImage = input.desktopImage?.trim() ?? "";
-  const mobileImage = input.mobileImage?.trim() || null;
+  const requestedDesktopImage = normalizeHeroImageValue(input.desktopImage);
+  const requestedMobileImage = normalizeHeroImageValue(input.mobileImage);
+  const desktopImage =
+    requestedDesktopImage ||
+    normalizeHeroImageValue(existingHero.desktopImage) ||
+    staticHeroSection.desktopImage;
+  const mobileImage =
+    requestedMobileImage || normalizeHeroImageValue(existingHero.mobileImage) || null;
   const heading = input.heading?.trim() || existingHero.heading || staticHeroSection.heading;
   const subheading =
     input.subheading?.trim() || existingHero.subheading || staticHeroSection.subheading;
@@ -1190,21 +1222,29 @@ export async function upsertGalleryItem(input: SaveGalleryItemInput) {
   const pool = await getPool();
   const title = input.title.trim();
   const slug = slugify(input.slug?.trim() || title);
+  const requestedImage = input.image?.trim() ?? "";
 
   if (!title || !slug) {
     throw new Error("Gallery item title is required.");
   }
 
-  const values = [
-    slug,
-    title,
-    input.image?.trim() ?? "",
-    input.description?.trim() ?? "",
-    Number.isFinite(Number(input.sortOrder)) ? Number(input.sortOrder) : 100,
-    input.isPublished === false ? 0 : 1,
-  ];
-
   if (input.id) {
+    const [rows] = await pool.query<any[]>(
+      "SELECT image FROM cms_gallery_items WHERE id = ? LIMIT 1",
+      [input.id],
+    );
+    const currentItem = rows[0];
+
+    if (!currentItem) {
+      throw new Error("Gallery item not found.");
+    }
+
+    const image = requestedImage || String(currentItem.image ?? "").trim();
+
+    if (!image) {
+      throw new Error("Gallery image is required.");
+    }
+
     await pool.execute(
       `
         UPDATE cms_gallery_items
@@ -1217,15 +1257,34 @@ export async function upsertGalleryItem(input: SaveGalleryItemInput) {
           is_published = ?
         WHERE id = ?
       `,
-      [...values, input.id],
+      [
+        slug,
+        title,
+        image,
+        input.description?.trim() ?? "",
+        Number.isFinite(Number(input.sortOrder)) ? Number(input.sortOrder) : 100,
+        input.isPublished === false ? 0 : 1,
+        input.id,
+      ],
     );
   } else {
+    if (!requestedImage) {
+      throw new Error("Gallery image is required.");
+    }
+
     await pool.execute(
       `
         INSERT INTO cms_gallery_items (slug, title, image, description, sort_order, is_published)
         VALUES (?, ?, ?, ?, ?, ?)
       `,
-      values,
+      [
+        slug,
+        title,
+        requestedImage,
+        input.description?.trim() ?? "",
+        Number.isFinite(Number(input.sortOrder)) ? Number(input.sortOrder) : 100,
+        input.isPublished === false ? 0 : 1,
+      ],
     );
   }
 }

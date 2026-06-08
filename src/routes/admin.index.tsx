@@ -4,7 +4,7 @@ import {
   BookOpen,
   Database,
   FolderTree,
-  Image,
+  Image as ImageIcon,
   ImagePlus,
   LogOut,
   MessageSquareQuote,
@@ -340,7 +340,7 @@ function readFileAsDataUrl(file: File, options: ImageUploadOptions = DEFAULT_IMA
     }
 
     const url = URL.createObjectURL(file);
-    const img = new Image();
+    const img = new window.Image();
 
     img.onload = () => {
       URL.revokeObjectURL(url);
@@ -788,7 +788,7 @@ function AdminDashboard() {
     {
       id: "hero",
       label: "Hero Section",
-      icon: Image,
+      icon: ImageIcon,
       count: "1",
       note: heroSection.source === "database" ? "Homepage hero managed in admin" : "Using fallback hero settings",
     },
@@ -1328,7 +1328,7 @@ function AdminDashboard() {
                       onChange={(value) => setHeroDraft((prev) => ({ ...prev, desktopImage: value }))}
                       uploadLabel="Choose desktop banner image"
                       urlPlaceholder="https://example.com/hero-desktop.jpg"
-                      helper="Recommended: 1920x1080 (minimum 1280x720). JPG, PNG, WEBP only. Uploaded files are auto-optimized."
+                      helper="Recommended: 1920x1080 (minimum 1280x720). JPG, PNG, WEBP only. Uploaded files are auto-optimized. Leaving it blank while editing keeps the current banner."
                       uploadOptions={HERO_DESKTOP_UPLOAD_OPTIONS}
                       accept="image/jpeg,image/png,image/webp"
                     />
@@ -1339,7 +1339,7 @@ function AdminDashboard() {
                       onChange={(value) => setHeroDraft((prev) => ({ ...prev, mobileImage: value }))}
                       uploadLabel="Choose mobile banner image"
                       urlPlaceholder="https://example.com/hero-mobile.jpg"
-                      helper="Recommended: 1080x1350 (minimum 720x900). Leave blank to use desktop image on mobile."
+                      helper="Recommended: 1080x1350 (minimum 720x900). Leaving it blank while editing keeps the current mobile banner; if none exists, mobile uses the desktop image."
                       uploadOptions={HERO_MOBILE_UPLOAD_OPTIONS}
                       accept="image/jpeg,image/png,image/webp"
                     />
@@ -2015,7 +2015,7 @@ function AdminDashboard() {
                         onChange={(value) => setGalleryDraft((prev) => ({ ...prev, image: value }))}
                         uploadLabel="Choose gallery image"
                         urlPlaceholder="https://example.com/heritage-photo.jpg"
-                        helper="Upload or provide a hosted URL for this gallery image."
+                        helper="Upload or provide a hosted URL for this gallery image. When editing an existing item, leaving this blank keeps the stored database image."
                       />
                     </div>
                     <div className="mt-4">
@@ -2743,6 +2743,14 @@ function SourceBadge({ source }: { source?: string }) {
     >
       {source === "database" ? "Admin managed" : "Legacy frontend"}
     </span>
+  );
+}
+
+function LegacyNote({ text }: { text: string }) {
+  return (
+    <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-100">
+      {text}
+    </div>
   );
 }
 
