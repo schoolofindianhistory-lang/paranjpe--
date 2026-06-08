@@ -3,48 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowRight, Clock, MapPin, TrendingUp } from "lucide-react";
 import { type Tour } from "@/data/tours";
 import { isExternalLink, resolveTourBookingHref } from "@/lib/booking";
-
-function formatTourDate(value: string) {
-  const trimmed = value.trim();
-  const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-
-  if (!match) {
-    return trimmed;
-  }
-
-  const [, yearText, monthText, dayText] = match;
-  const year = Number(yearText);
-  const monthIndex = Number(monthText) - 1;
-  const day = Number(dayText);
-  const date = new Date(Date.UTC(year, monthIndex, day));
-
-  if (Number.isNaN(date.getTime())) {
-    return trimmed;
-  }
-
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  })
-    .format(date)
-    .replace(",", "");
-}
-
-function getTourRibbonLabel(tour: Pick<Tour, "tourDate" | "tourDateLabel">) {
-  const customLabel = tour.tourDateLabel?.trim();
-  if (customLabel) {
-    return customLabel;
-  }
-
-  const tourDate = tour.tourDate?.trim();
-  if (tourDate) {
-    return formatTourDate(tourDate);
-  }
-
-  return "Coming Soon";
-}
+import { getTourRibbonLabel } from "@/lib/tour-dates";
 
 export function TourCard({
   tour,
@@ -66,7 +25,12 @@ export function TourCard({
     >
       <div className="relative overflow-hidden">
         <div className="tour-card-media relative aspect-[4/3] overflow-hidden">
-          <img src={tour.image} alt={tour.title} className="h-full w-full object-cover" loading="lazy" />
+          <img
+            src={tour.image}
+            alt={tour.title}
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
           <div className="absolute inset-0 bg-gradient-to-t from-primary/78 via-primary/16 to-transparent" />
           {ribbonLabel ? (
             <span className="pointer-events-none absolute -left-[3.85rem] top-6 z-20 w-52 -rotate-45 bg-[#bd3a4f] px-8 py-2 text-center text-[0.95rem] font-semibold text-white shadow-[0_10px_22px_-12px_rgba(0,0,0,0.65)]">
@@ -86,7 +50,9 @@ export function TourCard({
         </div>
 
         <h3 className="font-serif text-2xl text-primary leading-snug">{tour.title}</h3>
-        <p className="mt-3 text-sm leading-relaxed text-muted-foreground line-clamp-2">{tour.short}</p>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground line-clamp-2">
+          {tour.short}
+        </p>
 
         <div className="mt-5 grid grid-cols-3 gap-2 text-[11px] text-foreground/75">
           <span className="tour-card-meta inline-flex items-center gap-1.5 rounded-full bg-secondary/65 px-3 py-2">
@@ -105,7 +71,9 @@ export function TourCard({
 
         <div className="mt-6 flex items-end justify-between gap-4">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">Starting From</p>
+            <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+              Starting From
+            </p>
             <span className="font-serif text-xl text-primary">{tour.price}</span>
           </div>
           <div className="flex flex-col items-end gap-2">

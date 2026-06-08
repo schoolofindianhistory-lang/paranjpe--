@@ -192,7 +192,7 @@ export const staticGalleryItems: GalleryItem[] = [
 ];
 
 export const staticHeroSection: HeroSectionContent = {
-  desktopImage: heroTemple,
+  desktopImage: "/hero-temple.jpg",
   mobileImage: "",
   heading: "Explore Living Heritage Beyond Tourism",
   subheading:
