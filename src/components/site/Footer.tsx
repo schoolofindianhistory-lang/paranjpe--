@@ -141,7 +141,11 @@ export function Footer() {
         </div>
       </div>
       <div className="relative z-10 border-t border-border/80 bg-[color-mix(in_oklab,var(--background)_74%,transparent)] px-4 py-5 text-center text-[0.82rem] font-medium leading-6 text-foreground/75 backdrop-blur-sm">
-        &copy; {new Date().getFullYear()} Paranjape Tours. Crafted with reverence for living heritage.
+        &copy; 2026 All Rights Reserved By Paranjape Tours. Designed By{" "}
+        <a href="https://webakoof.com/index.html" className="transition-colors hover:text-primary">
+          Webakoof
+        </a>
+        .
       </div>
     </footer>
   );
