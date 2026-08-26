@@ -1103,20 +1103,20 @@ function AdminDashboard() {
               <SectionCard
                 id="categories"
                 title="Categories"
-                subtitle="The frontend tour menu uses these three category groups."
+                subtitle="The frontend tour menu and tour filters use the saved categories below."
               >
                 <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
                   <div className="grid gap-5">
                     <div className={darkPanelClass}>
                       <p className="text-xs uppercase tracking-[0.2em] text-white/40">
-                        Frontend Category Groups
+                        Preset Category Groups
                       </p>
                       <h3 className="mt-3 font-sans text-2xl font-semibold tracking-[-0.02em] text-white">
                         One Day Tour, Heritage Walk and Multiple Day Tour
                       </h3>
                       <p className="mt-3 max-w-3xl text-sm leading-6 text-white/55">
-                        These are the three category options already used in the tours menu on the
-                        frontend. Click a card to review or update its details.
+                        These are the starting category options. Click a card to review or update
+                        its details.
                       </p>
                     </div>
 
@@ -1166,8 +1166,8 @@ function AdminDashboard() {
                           Additional categories
                         </h3>
                         <p className="mt-3 text-sm leading-6 text-white/55">
-                          These are extra saved categories outside the three main frontend tour
-                          types.
+                          These saved categories now appear in the public tours menu and filter
+                          buttons.
                         </p>
                         <div className="mt-5 grid gap-4">
                           {extraCategories.map((category) => (
@@ -1225,11 +1225,11 @@ function AdminDashboard() {
                   >
                     <FormHeader
                       title={categoryDraft.id ? "Edit category" : "Add category"}
-                      description="Use this panel to update one of the three frontend category groups or save an extra category."
+                      description="Use this panel to update an existing category or save a new frontend tour category."
                       onReset={() => setCategoryDraft(categoryToDraft())}
                     />
                     <div className="mt-6 rounded-[1.5rem] border border-orange-500/16 bg-orange-500/8 p-4 text-sm leading-6 text-white/72">
-                      The tours menu currently expects these labels:
+                      The tours menu starts with these preset labels:
                       <strong className="ml-1 text-orange-200">
                         One Day Tour, Heritage Walk, Multiple Day Tour
                       </strong>

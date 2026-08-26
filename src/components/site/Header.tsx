@@ -1,7 +1,8 @@
 import { Link, useLocation } from "@/lib/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Menu, X } from "lucide-react";
-import { tourListingFilters } from "@/data/tourFilters";
+import { buildTourListingFilters, tourListingFilters, type TourListingFilterOption } from "@/data/tourFilters";
+import { getPublicSiteContent } from "@/lib/content.functions";
 
 const linksBeforeTours = [
   { to: "/", label: "Home" },
@@ -15,7 +16,6 @@ const linksAfterTours = [
   { to: "/contact", label: "Contact" },
 ] as const;
 
-const tourDropdownLinks = tourListingFilters.filter((filter) => filter.value !== "all");
 const navLinkClass =
   "text-sm transition-colors relative after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-0.5 after:w-0 after:bg-gold after:transition-all hover:after:w-full";
 
@@ -24,8 +24,40 @@ export function Header() {
   const [desktopToursOpen, setDesktopToursOpen] = useState(false);
   const [mobileToursOpen, setMobileToursOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [tourFilters, setTourFilters] = useState<TourListingFilterOption[]>([...tourListingFilters]);
   
   const currentLocation = useLocation({ select: (location) => location.href });
+  const tourDropdownLinks = useMemo(
+    () => tourFilters.filter((filter) => filter.value !== "all"),
+    [tourFilters],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadTourFilters = () => {
+      getPublicSiteContent()
+        .then((content) => {
+          if (!cancelled) {
+            setTourFilters(buildTourListingFilters(content.tours, content.categories));
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setTourFilters([...tourListingFilters]);
+          }
+        });
+    };
+
+    loadTourFilters();
+    window.addEventListener("app:invalidate", loadTourFilters);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("app:invalidate", loadTourFilters);
+    };
+  }, []);
+
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
     onScroll();

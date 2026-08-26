@@ -1,4 +1,5 @@
 import type { Tour } from "@/data/tours";
+import type { ContentCategory, ManagedTour } from "@/lib/content.types";
 
 export const tourListingFilters = [
   { value: "all", label: "All Tours" },
@@ -7,22 +8,69 @@ export const tourListingFilters = [
   { value: "multiple-day-tour", label: "Multiple Day Tour" },
 ] as const;
 
-export type TourListingFilter = (typeof tourListingFilters)[number]["value"];
+export type TourListingFilter = string;
+export type TourListingFilterOption = {
+  value: string;
+  label: string;
+};
 
-export function getTourListingType(tour: Tour): Exclude<TourListingFilter, "all"> {
-  if (tour.category === "Heritage Walk") return "heritage-walk";
-  if (tour.category === "Multiple Day Tour") return "multiple-day-tour";
-
-  const duration = tour.duration.toLowerCase();
-  const isMultipleDay =
-    /\b\d+\s*days?\b/.test(duration) ||
-    duration.includes("multiple day") ||
-    duration.includes("multi day");
-
-  return isMultipleDay ? "multiple-day-tour" : "one-day-tour";
+function slugifyCategory(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
-export function filterToursByListingType(list: Tour[], filter: TourListingFilter) {
+function addFilter(filters: Map<string, TourListingFilterOption>, value: string, label: string) {
+  const normalizedValue = value.trim();
+  const normalizedLabel = label.trim();
+
+  if (!normalizedValue || !normalizedLabel || filters.has(normalizedValue)) {
+    return;
+  }
+
+  filters.set(normalizedValue, {
+    value: normalizedValue,
+    label: normalizedLabel,
+  });
+}
+
+export function getTourListingType(tour: Tour | ManagedTour, categories: ContentCategory[] = []) {
+  const managedTour = tour as ManagedTour;
+
+  if (managedTour.categoryId !== undefined) {
+    const category = categories.find((item) => item.id === managedTour.categoryId);
+    if (category?.slug) {
+      return category.slug;
+    }
+  }
+
+  const category = categories.find((item) => item.name.trim().toLowerCase() === tour.category.trim().toLowerCase());
+  return category?.slug || slugifyCategory(tour.category);
+}
+
+export function buildTourListingFilters(tours: ManagedTour[], categories: ContentCategory[]) {
+  const filters = new Map<string, TourListingFilterOption>();
+  addFilter(filters, "all", "All Tours");
+
+  for (const category of categories) {
+    addFilter(filters, category.slug, category.name);
+  }
+
+  for (const tour of tours) {
+    addFilter(filters, getTourListingType(tour, categories), tour.category);
+  }
+
+  return Array.from(filters.values());
+}
+
+export function filterToursByListingType(
+  list: ManagedTour[],
+  filter: TourListingFilter,
+  categories: ContentCategory[] = [],
+) {
   if (filter === "all") return list;
-  return list.filter((tour) => getTourListingType(tour) === filter);
+  return list.filter((tour) => getTourListingType(tour, categories) === filter);
 }

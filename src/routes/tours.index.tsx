@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { Layout } from "@/components/site/Layout";
 import { PageBanner } from "@/components/site/PageBanner";
 import { TourCard } from "@/components/site/TourCard";
-import { filterToursByListingType, tourListingFilters, type TourListingFilter } from "@/data/tourFilters";
+import { buildTourListingFilters, filterToursByListingType } from "@/data/tourFilters";
 import { getPublicSiteContent } from "@/lib/static-content";
 import heroFort from "@/assets/hero-fort.jpg";
 
@@ -27,17 +27,17 @@ export const Route = createFileRoute("/tours/")({
 });
 
 function ToursList() {
-  const { tours } = Route.useLoaderData();
+  const { tours, categories } = Route.useLoaderData();
   const { type: rawType } = Route.useSearch();
-  const type = tourListingFilters.some((filter) => filter.value === rawType)
-    ? (rawType as TourListingFilter)
-    : "all";
+
+  const filters = useMemo(() => buildTourListingFilters(tours, categories), [tours, categories]);
+  const type = filters.some((filter) => filter.value === rawType) ? rawType : "all";
 
   const list = useMemo(() => {
-    return filterToursByListingType(tours, type);
-  }, [tours, type]);
+    return filterToursByListingType(tours, type, categories);
+  }, [categories, tours, type]);
 
-  const activeFilter = tourListingFilters.find((filter) => filter.value === type) ?? tourListingFilters[0];
+  const activeFilter = filters.find((filter) => filter.value === type) ?? filters[0];
 
   return (
     <Layout>
@@ -49,7 +49,7 @@ function ToursList() {
       />
       <section className="container-prose py-14">
         <div className="flex flex-wrap justify-center gap-2 mb-10">
-          {tourListingFilters.map((filter) => (
+          {filters.map((filter) => (
             <Link
               key={filter.value}
               to="/tours"
