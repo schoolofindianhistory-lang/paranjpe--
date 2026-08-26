@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link } from "@/lib/navigation";
 import { ChevronRight } from "lucide-react";
 
 export function Breadcrumb({ items }: { items: { label: string; to?: string }[] }) {

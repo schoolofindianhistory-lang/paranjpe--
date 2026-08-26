@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link } from "@/lib/navigation";
 import { ArrowRight, Clock, MapPin, TrendingUp } from "lucide-react";
 import { type Tour } from "@/data/tours";
 import { isExternalLink, resolveTourBookingHref } from "@/lib/booking";

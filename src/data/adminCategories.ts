@@ -19,7 +19,7 @@ export const adminTourCategoryPresets = [
   },
 ] as const;
 
-export const adminTourCategoryPresetSlugs = new Set(
+export const adminTourCategoryPresetSlugs = new Set<string>(
   adminTourCategoryPresets.map((category) => category.slug),
 );
 

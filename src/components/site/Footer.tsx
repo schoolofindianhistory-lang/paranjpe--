@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link } from "@/lib/navigation";
 import { Facebook, Instagram, Mail, MapPin, Phone, Youtube } from "lucide-react";
 import footerBackdrop from "@/assets/gallery/gondeshwar-complex.jpg";
 import { siteContact } from "@/data/siteContact";
@@ -89,8 +89,8 @@ export function Footer() {
                   key={label}
                   href={href}
                   aria-label={label}
-                  target={href === "#" ? undefined : "_blank"}
-                  rel={href === "#" ? undefined : "noreferrer"}
+                  target="_blank"
+                  rel="noreferrer"
                   className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border text-foreground/80 transition-colors hover:border-primary hover:text-primary"
                 >
                   <Icon size={16} />

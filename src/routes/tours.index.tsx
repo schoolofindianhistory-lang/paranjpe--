@@ -1,10 +1,10 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@/lib/navigation";
 import { useMemo } from "react";
 import { Layout } from "@/components/site/Layout";
 import { PageBanner } from "@/components/site/PageBanner";
 import { TourCard } from "@/components/site/TourCard";
-import { filterToursByListingType, tourListingFilters } from "@/data/tourFilters";
-import { getPublicSiteContent } from "@/lib/content.functions";
+import { filterToursByListingType, tourListingFilters, type TourListingFilter } from "@/data/tourFilters";
+import { getPublicSiteContent } from "@/lib/static-content";
 import heroFort from "@/assets/hero-fort.jpg";
 
 export const Route = createFileRoute("/tours/")({
@@ -28,7 +28,10 @@ export const Route = createFileRoute("/tours/")({
 
 function ToursList() {
   const { tours } = Route.useLoaderData();
-  const { type } = Route.useSearch();
+  const { type: rawType } = Route.useSearch();
+  const type = tourListingFilters.some((filter) => filter.value === rawType)
+    ? (rawType as TourListingFilter)
+    : "all";
 
   const list = useMemo(() => {
     return filterToursByListingType(tours, type);

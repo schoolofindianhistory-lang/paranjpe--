@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@/lib/navigation";
 import type { CSSProperties } from "react";
 import {
   ArrowRight,
@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Layout } from "@/components/site/Layout";
 import { PageBanner } from "@/components/site/PageBanner";
-import { getPublicSiteContent } from "@/lib/content.functions";
+import { getPublicSiteContent } from "@/lib/static-content";
 import heroTemple from "@/assets/hero-temple.jpg";
 
 export const Route = createFileRoute("/shop")({

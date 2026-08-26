@@ -1,8 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@/lib/navigation";
 import { Award, Compass, Heart, Sparkles, UserRound, Users } from "lucide-react";
 import { Layout } from "@/components/site/Layout";
 import { PageBanner } from "@/components/site/PageBanner";
-import { getPublicSiteContent } from "@/lib/content.functions";
+import { getPublicSiteContent } from "@/lib/static-content";
 import heroStory from "@/assets/hero-story.jpg";
 import founderPortrait from "@/assets/gallery/WhatsApp Image 2026-05-11 at 11.10.11 PM.jpeg";
 

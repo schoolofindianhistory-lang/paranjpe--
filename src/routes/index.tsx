@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@/lib/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
@@ -12,7 +12,7 @@ import {
   Utensils,
 } from "lucide-react";
 import { Layout } from "@/components/site/Layout";
-import { getPublicSiteContent } from "@/lib/content.functions";
+import { getPublicSiteContent } from "@/lib/static-content";
 import { resolveBlogImage } from "@/lib/blog-images";
 import type { Testimonial } from "@/lib/content.types";
 import { WhatsAppIcon } from "@/components/site/WhatsAppIcon";
@@ -164,9 +164,9 @@ function Home() {
     : 0.35;
   const slides = [
     { image: heroDesktopImage, mobileImage: heroMobileImage, ...heroSlides[0] },
-    { image: pattadakalTemple, ...heroSlides[1] },
-    { image: hampiVitthala, ...heroSlides[2] },
-    { image: gondeshwarComplex, ...heroSlides[3] },
+    { image: pattadakalTemple, mobileImage: "", ...heroSlides[1] },
+    { image: hampiVitthala, mobileImage: "", ...heroSlides[2] },
+    { image: gondeshwarComplex, mobileImage: "", ...heroSlides[3] },
   ] as const;
 
   useEffect(() => {

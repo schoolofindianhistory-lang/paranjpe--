@@ -1,9 +1,9 @@
-import { Link, createFileRoute, notFound } from "@tanstack/react-router";
+import { Link, createFileRoute, notFound } from "@/lib/navigation";
 import { ArrowRight } from "lucide-react";
 import { Layout } from "@/components/site/Layout";
 import { PageBanner } from "@/components/site/PageBanner";
 import { resolveBlogImage } from "@/lib/blog-images";
-import { getPublicSiteContent } from "@/lib/content.functions";
+import { getPublicSiteContent } from "@/lib/static-content";
 
 export const Route = createFileRoute("/blog/$slug")({
   loader: async ({ params }) => {

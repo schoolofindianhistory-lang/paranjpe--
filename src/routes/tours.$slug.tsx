@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useRouter } from "@/lib/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Calendar, Check, ChevronDown, Clock, MapPin, Mountain, Users, X } from "lucide-react";
 import { Layout } from "@/components/site/Layout";
@@ -7,7 +7,7 @@ import { TourCard } from "@/components/site/TourCard";
 import { WhatsAppIcon } from "@/components/site/WhatsAppIcon";
 import { createWhatsAppUrl } from "@/data/siteContact";
 import { isExternalLink, resolveTourBookingHref } from "@/lib/booking";
-import { getPublicSiteContent } from "@/lib/content.functions";
+import { getPublicSiteContent } from "@/lib/static-content";
 import { buildTourPagePath, toAbsoluteSiteUrl } from "@/lib/site-url";
 import { getTourDisplayImage, getTourShareImageUrl } from "@/lib/tour-images";
 

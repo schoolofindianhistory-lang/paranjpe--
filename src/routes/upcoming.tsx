@@ -1,10 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@/lib/navigation";
 import { Calendar, MapPin, Users } from "lucide-react";
 import { Layout } from "@/components/site/Layout";
 import { PageBanner } from "@/components/site/PageBanner";
 import { upcomingTours } from "@/data/tours";
 import { isExternalLink, resolveTourBookingHref } from "@/lib/booking";
-import { getPublicSiteContent } from "@/lib/content.functions";
+import { getPublicSiteContent } from "@/lib/static-content";
 import { isScheduledDateExpired } from "@/lib/tour-dates";
 import heroTemple from "@/assets/hero-temple.jpg";
 

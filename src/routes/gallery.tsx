@@ -1,9 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@/lib/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { Layout } from "@/components/site/Layout";
 import { PageBanner } from "@/components/site/PageBanner";
-import { getPublicSiteContent } from "@/lib/content.functions";
+import { getPublicSiteContent } from "@/lib/static-content";
 import heroStory from "@/assets/hero-story.jpg";
 
 export const Route = createFileRoute("/gallery")({

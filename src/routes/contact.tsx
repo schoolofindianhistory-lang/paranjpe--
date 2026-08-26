@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@/lib/navigation";
 import { useState, type ComponentType, type FormEvent } from "react";
 import { Clock, Mail, MapPin, Phone, Send } from "lucide-react";
 import type { ContactEnquiryInput } from "@/data/contactEnquiry";
@@ -7,7 +7,7 @@ import { PageBanner } from "@/components/site/PageBanner";
 import { WhatsAppIcon } from "@/components/site/WhatsAppIcon";
 import { siteContact } from "@/data/siteContact";
 import type { ManagedTour } from "@/lib/content.types";
-import { getPublicSiteContent, submitContactEnquiry } from "@/lib/content.functions";
+import { getPublicSiteContent, submitContactEnquiry } from "@/lib/static-content";
 
 export const Route = createFileRoute("/contact")({
   loader: () => getPublicSiteContent(),

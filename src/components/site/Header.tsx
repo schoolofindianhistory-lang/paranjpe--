@@ -1,4 +1,4 @@
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link, useLocation } from "@/lib/navigation";
 import { useEffect, useState } from "react";
 import { ChevronDown, Menu, X } from "lucide-react";
 import { tourListingFilters } from "@/data/tourFilters";
@@ -71,7 +71,7 @@ export function Header() {
             <Link
               key={l.to}
               to={l.to}
-              activeOptions={{ exact: l.to === "/" }}
+              activeOptions={{ exact: false }}
               activeProps={{ className: "text-primary font-semibold" }}
               inactiveProps={{ className: "text-foreground/70 hover:text-primary" }}
               className={navLinkClass}
@@ -133,7 +133,7 @@ export function Header() {
             <Link
               key={l.to}
               to={l.to}
-              activeOptions={{ exact: l.to === "/" }}
+              activeOptions={{ exact: false }}
               activeProps={{ className: "text-primary font-semibold" }}
               inactiveProps={{ className: "text-foreground/70 hover:text-primary" }}
               className={navLinkClass}
@@ -167,7 +167,7 @@ export function Header() {
                 key={l.to}
                 to={l.to}
                 onClick={closeMenus}
-                activeOptions={{ exact: l.to === "/" }}
+                activeOptions={{ exact: false }}
                 activeProps={{ className: "bg-secondary text-primary" }}
                 className="px-3 py-2.5 rounded-md text-sm hover:bg-secondary"
               >
@@ -220,7 +220,7 @@ export function Header() {
                 key={l.to}
                 to={l.to}
                 onClick={closeMenus}
-                activeOptions={{ exact: l.to === "/" }}
+                activeOptions={{ exact: false }}
                 activeProps={{ className: "bg-secondary text-primary" }}
                 className="px-3 py-2.5 rounded-md text-sm hover:bg-secondary"
               >
