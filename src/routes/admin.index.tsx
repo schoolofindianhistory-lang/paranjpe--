@@ -430,8 +430,10 @@ function textToFaqs(text: string) {
 }
 
 function categoryToDraft(category?: ContentCategory): CategoryDraft {
+  const categoryId = category && category.id > 0 ? category.id : undefined;
+
   return {
-    id: category?.id,
+    id: categoryId,
     name: category?.name ?? "",
     slug: category?.slug ?? "",
     description: category?.description ?? "",
@@ -732,7 +734,7 @@ function AdminDashboard() {
       source: matchingCategory?.source,
     };
   });
-  const extraCategories = adminCategories.filter(
+  const frontendExtraCategories = categories.filter(
     (category) => !adminTourCategoryPresetSlugs.has(category.slug),
   );
   const tourCategoryOptions = [
@@ -742,10 +744,12 @@ function AdminDashboard() {
         value: String(category.id),
         label: category.name,
       })),
-    ...extraCategories.map((category) => ({
-      value: String(category.id),
-      label: category.name,
-    })),
+    ...frontendExtraCategories
+      .filter((category) => category.id > 0)
+      .map((category) => ({
+        value: String(category.id),
+        label: category.name,
+      })),
   ];
 
   const [activeSection, setActiveSection] = useState<AdminSectionId>("categories");
@@ -782,7 +786,7 @@ function AdminDashboard() {
       id: "categories",
       label: "Categories",
       icon: FolderTree,
-      count: `${adminCategories.length}`,
+      count: `${categories.length}`,
       note: "Used in the tour form",
     },
     {
@@ -1010,7 +1014,7 @@ function AdminDashboard() {
                 Admin Dashboard
               </h1>
               <p className="mt-3 text-sm text-white/50 md:text-base">
-                Tours: {editableTours.length} | Categories: {adminCategories.length} |
+                Tours: {editableTours.length} | Categories: {categories.length} |
                 Gallery: {editableGalleryItems.length} |
                 Testimonials: {editableTestimonials.length} | Team: {editableTeamMembers.length} |
                 Shop: {editableShopItems.length} | Blogs: {editableBlogs.length}
@@ -1157,7 +1161,7 @@ function AdminDashboard() {
                       ))}
                     </div>
 
-                    {extraCategories.length > 0 && (
+                    {frontendExtraCategories.length > 0 && (
                       <div className={darkPanelClass}>
                         <p className="text-xs uppercase tracking-[0.2em] text-white/40">
                           Extra Saved Categories
@@ -1170,34 +1174,41 @@ function AdminDashboard() {
                           buttons.
                         </p>
                         <div className="mt-5 grid gap-4">
-                          {extraCategories.map((category) => (
+                          {frontendExtraCategories.map((category) => (
                             <RecordCard
                               key={category.id}
                               title={category.name}
                               meta={category.slug}
                               source={category.source}
-                              description={category.description || "No description added yet."}
+                              description={
+                                category.description ||
+                                (category.source === "database"
+                                  ? "No description added yet."
+                                  : "This category comes from existing frontend tours. Create it here to use it for new admin tours.")
+                              }
                               actions={
                                 <div className="flex gap-2">
                                   <SmallButton
-                                    label="Edit"
+                                    label={category.id > 0 ? "Edit" : "Create category"}
                                     icon={PencilLine}
                                     onClick={() => setCategoryDraft(categoryToDraft(category))}
                                   />
-                                  <DangerButton
-                                    label="Delete"
-                                    icon={Trash2}
-                                    onClick={() => {
-                                      if (!window.confirm(`Delete the category "${category.name}"?`)) {
-                                        return;
-                                      }
+                                  {category.id > 0 && (
+                                    <DangerButton
+                                      label="Delete"
+                                      icon={Trash2}
+                                      onClick={() => {
+                                        if (!window.confirm(`Delete the category "${category.name}"?`)) {
+                                          return;
+                                        }
 
-                                      void runTask("delete-category", "Category deleted.", async () => {
-                                        await deleteCategory({ data: { id: category.id } });
-                                        setCategoryDraft(categoryToDraft());
-                                      });
-                                    }}
-                                  />
+                                        void runTask("delete-category", "Category deleted.", async () => {
+                                          await deleteCategory({ data: { id: category.id } });
+                                          setCategoryDraft(categoryToDraft());
+                                        });
+                                      }}
+                                    />
+                                  )}
                                 </div>
                               }
                             />
