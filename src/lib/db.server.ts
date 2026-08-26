@@ -7,7 +7,7 @@ import { defaultTeamMembers } from "@/data/teamMembers";
 const DEFAULT_DB_HOST = process.env.MYSQL_HOST ?? "127.0.0.1";
 const DEFAULT_DB_PORT = Number(process.env.MYSQL_PORT ?? "3306");
 const DEFAULT_DB_USER = process.env.MYSQL_USER ?? "root";
-const DEFAULT_DB_PASSWORD = process.env.MYSQL_PASSWORD ?? "root";
+const DEFAULT_DB_PASSWORD = process.env.MYSQL_PASSWORD ?? process.env.PASSWORD ?? "root";
 const DEFAULT_DB_NAME = process.env.MYSQL_DATABASE ?? "paranjpe_tours";
 const DB_SCHEMA_VERSION = "paranjpe-cms-v8";
 
