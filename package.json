@@ -4,10 +4,10 @@
   "sideEffects": false,
   "type": "module",
   "scripts": {
-    "dev": "vite dev",
-    "build": "vite build",
+    "dev": "npm run build && npm run start",
+    "build": "vite build && vite build --ssr server/index.ts --outDir server-dist",
     "build:dev": "vite build --mode development",
-    "start": "node static-server.mjs",
+    "start": "node server-dist/index.js",
     "serve": "npm run build && npm run start",
     "preview": "vite preview",
     "lint": "eslint .",
@@ -19,6 +19,7 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.2.1",
     "lucide-react": "^0.575.0",
+    "mysql2": "^3.22.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "tailwindcss": "^4.2.1",

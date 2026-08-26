@@ -1,6 +1,11 @@
-import { useEffect, type ComponentType } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import { RouteContextProvider, navigateTo, useLocation } from "@/lib/navigation";
-import { getPublicSiteContent } from "@/lib/static-content";
+import { getPublicSiteContent as getStaticSiteContent } from "@/lib/static-content";
+import {
+  getAdminDashboardContent,
+  getPublicSiteContent as fetchPublicSiteContent,
+} from "@/lib/content.functions";
+import type { AdminDashboardData, PublicSiteContent } from "@/lib/content.types";
 import { Route as HomeRoute } from "@/routes/index";
 import { Route as AboutRoute } from "@/routes/about";
 import { Route as ToursRoute } from "@/routes/tours.index";
@@ -19,7 +24,7 @@ import { Route as AdminRoute } from "@/routes/admin.index";
 import { Layout } from "@/components/site/Layout";
 import { Link } from "@/lib/navigation";
 
-const publicContent = getPublicSiteContent();
+const staticPublicContent = getStaticSiteContent();
 
 function getSearchObject(search: string) {
   return Object.fromEntries(new URLSearchParams(search));
@@ -52,12 +57,85 @@ export default function App() {
   const location = useLocation();
   const pathname = normalizePath(location.pathname);
   const search = getSearchObject(location.search);
+  const [publicContent, setPublicContent] = useState<PublicSiteContent>(staticPublicContent);
+  const [contentLoaded, setContentLoaded] = useState(false);
+  const [adminData, setAdminData] = useState<AdminDashboardData | null>(null);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminError, setAdminError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (pathname === "/stories") {
       navigateTo("/blog", { replace: true });
     }
   }, [pathname]);
+
+  useEffect(() => {
+    const invalidate = () => setReloadKey((current) => current + 1);
+    window.addEventListener("app:invalidate", invalidate);
+    return () => window.removeEventListener("app:invalidate", invalidate);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetchPublicSiteContent()
+      .then((content) => {
+        if (!cancelled) {
+          setPublicContent(content);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPublicContent(staticPublicContent);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setContentLoaded(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey]);
+
+  useEffect(() => {
+    if (pathname !== "/admin") {
+      return;
+    }
+
+    let cancelled = false;
+    setAdminLoading(true);
+    setAdminError("");
+
+    getAdminDashboardContent()
+      .then((data) => {
+        if (!cancelled) {
+          setAdminData(data);
+        }
+      })
+      .catch((error) => {
+        if (cancelled) return;
+
+        if ((error as Error & { status?: number }).status === 401) {
+          navigateTo("/admin/login", { replace: true });
+          return;
+        }
+
+        setAdminError(error instanceof Error ? error.message : "Unable to load admin dashboard.");
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setAdminLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname, reloadKey]);
 
   if (pathname === "/") {
     return renderRoute({ component: HomeRoute.component!, loaderData: publicContent, search });
@@ -82,6 +160,10 @@ export default function App() {
         params: { slug },
         search,
       });
+    }
+
+    if (!contentLoaded && child !== "share-image") {
+      return <LoadingScreen label="Loading tour" />;
     }
   }
 
@@ -116,6 +198,10 @@ export default function App() {
         search,
       });
     }
+
+    if (!contentLoaded) {
+      return <LoadingScreen label="Loading blog post" />;
+    }
   }
 
   if (pathname === "/contact") {
@@ -139,7 +225,30 @@ export default function App() {
   }
 
   if (pathname === "/admin") {
-    return renderRoute({ component: AdminRoute.component!, loaderData: publicContent, search });
+    if (!adminData && !adminError) {
+      return <LoadingScreen label="Loading admin dashboard" />;
+    }
+
+    if (adminError) {
+      return (
+        <Layout>
+          <section className="container-prose py-32 text-center">
+            <p className="section-eyebrow">Admin</p>
+            <h1 className="mt-3 font-serif text-4xl text-primary">Unable to load dashboard</h1>
+            <p className="mx-auto mt-3 max-w-xl text-muted-foreground">{adminError}</p>
+          </section>
+        </Layout>
+      );
+    }
+
+    return renderRoute({
+      component: AdminRoute.component!,
+      loaderData: adminData ?? {
+        ...publicContent,
+        admin: { id: 0, username: "admin", displayName: "Administrator" },
+      },
+      search,
+    });
   }
 
   return (
@@ -156,6 +265,17 @@ export default function App() {
         >
           Back to Home
         </Link>
+      </section>
+    </Layout>
+  );
+}
+
+function LoadingScreen({ label }: { label: string }) {
+  return (
+    <Layout>
+      <section className="container-prose py-32 text-center">
+        <p className="section-eyebrow">{label}</p>
+        <h1 className="mt-3 font-serif text-4xl text-primary">Please wait</h1>
       </section>
     </Layout>
   );

@@ -241,7 +241,11 @@ export function useRouter() {
 
   return {
     state: { location },
-    invalidate: async () => {},
+    invalidate: async () => {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("app:invalidate"));
+      }
+    },
     navigate: useNavigate(),
   };
 }

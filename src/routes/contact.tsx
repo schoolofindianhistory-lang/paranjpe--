@@ -7,7 +7,7 @@ import { PageBanner } from "@/components/site/PageBanner";
 import { WhatsAppIcon } from "@/components/site/WhatsAppIcon";
 import { siteContact } from "@/data/siteContact";
 import type { ManagedTour } from "@/lib/content.types";
-import { getPublicSiteContent, submitContactEnquiry } from "@/lib/static-content";
+import { getPublicSiteContent, submitContactEnquiry } from "@/lib/content.functions";
 
 export const Route = createFileRoute("/contact")({
   loader: () => getPublicSiteContent(),

@@ -16,6 +16,7 @@ bun.lockb
 bun.lock
 dist
 dist-ssr
+server-dist
 .output
 .vercel
 .vinxi
